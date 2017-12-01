@@ -1,7 +1,7 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2017-2017 The OpenNMS Group, Inc.
+ * Copyright (C) 2017 The OpenNMS Group, Inc.
  * OpenNMS(R) is Copyright (C) 1999-2017 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
@@ -26,20 +26,32 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.flows.api;
+package org.opennms.netmgt.flows.itests;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
-public interface FlowRepository {
+import org.opennms.netmgt.flows.api.FlowDocument;
+import org.opennms.netmgt.flows.api.NetflowDocument;
 
-    void save(List<NetflowDocument> document) throws FlowException;
+public class FlowBuilder {
 
-    List<NetflowDocument> findAll(String query) throws FlowException;
+    private final List<NetflowDocument> flows = new ArrayList<>();
 
-    String rawQuery(String query) throws FlowException;
+    public FlowBuilder withFlow(Date date, String sourceIp, int sourcePort, String destIp, int destPort, int numBytes) {
+        final NetflowDocument flow = new NetflowDocument();
+        flow.setTimestamp(date.getTime());
+        flow.setIpv4SourceAddress(sourceIp);
+        flow.setSourcePort(sourcePort);
+        flow.setIpv4DestAddress(destIp);
+        flow.setDestPort(destPort);
+        flow.setInBytes(numBytes);
+        flows.add(flow);
+        return this;
+    }
 
-    List<TopNAppTrafficSummary> getTopNApplications(int N, long start, long end) throws FlowException;
-
-    List<TopNConversationTrafficSummary> getTopNConversations(int N, long start, long end) throws FlowException;
-
+    public List<NetflowDocument> build() {
+        return flows;
+    }
 }

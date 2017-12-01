@@ -1,7 +1,7 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2017-2017 The OpenNMS Group, Inc.
+ * Copyright (C) 2017 The OpenNMS Group, Inc.
  * OpenNMS(R) is Copyright (C) 1999-2017 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
@@ -28,18 +28,32 @@
 
 package org.opennms.netmgt.flows.api;
 
-import java.util.List;
+public class TopNAppTrafficSummary {
+    private String name;
+    private long bytesIn;
+    private long bytesOut;
 
-public interface FlowRepository {
+    public String getName() {
+        return name;
+    }
 
-    void save(List<NetflowDocument> document) throws FlowException;
+    public void setName(String name) {
+        this.name = name;
+    }
 
-    List<NetflowDocument> findAll(String query) throws FlowException;
+    public long getBytesIn() {
+        return bytesIn;
+    }
 
-    String rawQuery(String query) throws FlowException;
+    public void setBytesIn(long bytesIn) {
+        this.bytesIn = bytesIn;
+    }
 
-    List<TopNAppTrafficSummary> getTopNApplications(int N, long start, long end) throws FlowException;
+    public long getBytesOut() {
+        return bytesOut;
+    }
 
-    List<TopNConversationTrafficSummary> getTopNConversations(int N, long start, long end) throws FlowException;
-
+    public void setBytesOut(long bytesOut) {
+        this.bytesOut = bytesOut;
+    }
 }

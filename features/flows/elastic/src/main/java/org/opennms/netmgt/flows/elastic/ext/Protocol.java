@@ -1,7 +1,7 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2017-2017 The OpenNMS Group, Inc.
+ * Copyright (C) 2017 The OpenNMS Group, Inc.
  * OpenNMS(R) is Copyright (C) 1999-2017 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
@@ -26,20 +26,8 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.flows.api;
+package org.opennms.netmgt.flows.elastic.ext;
 
-import java.util.List;
-
-public interface FlowRepository {
-
-    void save(List<NetflowDocument> document) throws FlowException;
-
-    List<NetflowDocument> findAll(String query) throws FlowException;
-
-    String rawQuery(String query) throws FlowException;
-
-    List<TopNAppTrafficSummary> getTopNApplications(int N, long start, long end) throws FlowException;
-
-    List<TopNConversationTrafficSummary> getTopNConversations(int N, long start, long end) throws FlowException;
-
+public interface Protocol {
+    String getName();
 }

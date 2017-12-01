@@ -34,6 +34,8 @@ import java.util.Objects;
 import org.opennms.netmgt.flows.api.FlowException;
 import org.opennms.netmgt.flows.api.FlowRepository;
 import org.opennms.netmgt.flows.api.NetflowDocument;
+import org.opennms.netmgt.flows.api.TopNAppTrafficSummary;
+import org.opennms.netmgt.flows.api.TopNConversationTrafficSummary;
 import org.opennms.netmgt.flows.elastic.template.IndexSettings;
 
 import io.searchbox.client.JestClient;
@@ -68,6 +70,18 @@ public class InitializingFlowRepository implements FlowRepository {
     public String rawQuery(String query) throws FlowException {
         ensureInitialized();
         return delegate.rawQuery(query);
+    }
+
+    @Override
+    public List<TopNAppTrafficSummary> getTopNApplications(int N, long start, long end) throws FlowException {
+        ensureInitialized();
+        return delegate.getTopNApplications(N, start, end);
+    }
+
+    @Override
+    public List<TopNConversationTrafficSummary> getTopNConversations(int N, long start, long end) throws FlowException {
+        ensureInitialized();
+        return delegate.getTopNConversations(N, start, end);
     }
 
     private void ensureInitialized() {

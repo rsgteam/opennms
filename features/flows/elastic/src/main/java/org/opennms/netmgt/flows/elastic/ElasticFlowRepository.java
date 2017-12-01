@@ -29,6 +29,8 @@
 package org.opennms.netmgt.flows.elastic;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -39,6 +41,8 @@ import org.opennms.netmgt.flows.api.FlowRepository;
 import org.opennms.netmgt.flows.api.IndexStrategy;
 import org.opennms.netmgt.flows.api.NetflowDocument;
 import org.opennms.netmgt.flows.api.QueryException;
+import org.opennms.netmgt.flows.api.TopNAppTrafficSummary;
+import org.opennms.netmgt.flows.api.TopNConversationTrafficSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,6 +54,10 @@ import io.searchbox.core.BulkResult;
 import io.searchbox.core.Index;
 import io.searchbox.core.Search;
 import io.searchbox.core.SearchResult;
+import io.searchbox.core.search.aggregation.DateHistogramAggregation;
+import io.searchbox.core.search.aggregation.MetricAggregation;
+import io.searchbox.core.search.aggregation.SumAggregation;
+import io.searchbox.core.search.aggregation.TermsAggregation;
 
 public class ElasticFlowRepository implements FlowRepository {
 
@@ -101,6 +109,63 @@ public class ElasticFlowRepository implements FlowRepository {
         final List<SearchResult.Hit<NetflowDocument, Void>> hits = result.getHits(NetflowDocument.class);
         final List<NetflowDocument> data = hits.stream().map(hit -> hit.source).collect(Collectors.toList());
         return data;
+    }
+
+    @Override
+    public List<TopNAppTrafficSummary> getTopNApplications(int N, long start, long end) throws FlowException {
+        final String query = "{\n" +
+                "  \"size\": 0,\n" +
+                "  \"query\": {\n" +
+                "    \"bool\": {\n" +
+                "      \"filter\": [\n" +
+                "        {\n" +
+                "          \"range\": {\n" +
+                "            \"timestamp\": {\n" +
+                String.format("              \"gte\": %d,\n", start) +
+                String.format("              \"lte\": %d,\n", end) +
+                "              \"format\": \"epoch_millis\"\n" +
+                "            }\n" +
+                "          }\n" +
+                "        }\n" +
+                "      ]\n" +
+                "    }\n" +
+                "  },\n" +
+                "  \"aggs\": {\n" +
+                "    \"apps\": {\n" +
+                "      \"terms\": {\n" +
+                "        \"field\": \"application\",\n" +
+                String.format("        \"size\": %d\n", N) +
+                "      },\n" +
+                "      \"aggs\": {\n" +
+                "          \"total_bytes\": {\n" +
+                "            \"sum\": {\n" +
+                "              \"field\": \"in_bytes\"\n" +
+                "            }\n" +
+                "          }\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "  }\n" +
+                "}\n";
+
+        final List<TopNAppTrafficSummary> topN = new ArrayList<>(N);
+        final SearchResult result = search(query);
+        final MetricAggregation aggs = result.getAggregations();
+        final TermsAggregation apps = aggs.getTermsAggregation("apps");
+        for (TermsAggregation.Entry app : apps.getBuckets()) {
+            final SumAggregation sumAgg = app.getSumAggregation("total_bytes");
+
+            TopNAppTrafficSummary summary = new TopNAppTrafficSummary();
+            summary.setName(app.getKey());
+            summary.setBytesIn(sumAgg.getSum().longValue());
+            topN.add(summary);
+        }
+        return topN;
+    }
+
+    @Override
+    public List<TopNConversationTrafficSummary> getTopNConversations(int N, long start, long end) throws FlowException {
+        return Collections.emptyList();
     }
 
     private <T extends JestResult> T executeRequest(Action<T> clientRequest) throws FlowException {
