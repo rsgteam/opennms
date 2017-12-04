@@ -112,15 +112,15 @@ public class ConversationKey {
                 document.getIpv4SourceAddress(), document.getSourcePort()).toKeyword();
     }
 
-    public static String keyFor(NetflowDocument document, boolean isInitiator) {
+    public static ConversationKey keyFor(NetflowDocument document, boolean isInitiator) {
         if (isInitiator) {
             return new ConversationKey(document.getIpProtocol(),
                     document.getIpv4SourceAddress(), document.getSourcePort(),
-                    document.getIpv4DestAddress(), document.getDestPort()).toKeyword();
+                    document.getIpv4DestAddress(), document.getDestPort());
         } else {
             return new ConversationKey(document.getIpProtocol(),
                     document.getIpv4DestAddress(), document.getDestPort(),
-                    document.getIpv4SourceAddress(), document.getSourcePort()).toKeyword();
+                    document.getIpv4SourceAddress(), document.getSourcePort());
         }
     }
 }

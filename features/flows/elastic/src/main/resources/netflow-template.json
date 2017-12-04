@@ -20,16 +20,10 @@
         "dest_application": {
           "type": "keyword"
         },
-        "ingress_convo_key": {
-          "type": "keyword"
-        },
-        "egress_convo_key": {
-          "type": "keyword"
-        },
         "convo_key": {
           "type": "keyword"
         },
-        "initiator": {
+        "convo_initiator": {
           "type": "boolean"
         },
         "location": {

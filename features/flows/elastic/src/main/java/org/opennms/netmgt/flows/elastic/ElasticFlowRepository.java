@@ -29,8 +29,6 @@
 package org.opennms.netmgt.flows.elastic;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
@@ -39,10 +37,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import org.opennms.netmgt.flows.api.ConversationKey;
@@ -53,9 +49,10 @@ import org.opennms.netmgt.flows.api.NetflowDocument;
 import org.opennms.netmgt.flows.api.QueryException;
 import org.opennms.netmgt.flows.api.TopNAppTrafficSummary;
 import org.opennms.netmgt.flows.api.TopNConversationTrafficSummary;
+import org.opennms.netmgt.flows.elastic.ext.ConversationClassification;
+import org.opennms.netmgt.flows.elastic.ext.ConversationClassifier;
 import org.opennms.netmgt.flows.elastic.ext.Direction;
 import org.opennms.netmgt.flows.elastic.ext.FlowClassification;
-import org.opennms.netmgt.flows.elastic.ext.Protocol;
 import org.opennms.netmgt.flows.elastic.ext.FlowClassifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,11 +79,15 @@ public class ElasticFlowRepository implements FlowRepository {
     private final IndexStrategy indexStrategy;
 
     private final FlowClassifier flowClassifier;
+    private final ConversationClassifier conversationClassifier;
 
-    public ElasticFlowRepository(JestClient jestClient, IndexStrategy indexStrategy, FlowClassifier flowClassifier) {
+    public ElasticFlowRepository(JestClient jestClient, IndexStrategy indexStrategy,
+                                 FlowClassifier flowClassifier,
+                                 ConversationClassifier conversationClassifier) {
         this.client = Objects.requireNonNull(jestClient);
         this.indexStrategy = Objects.requireNonNull(indexStrategy);
         this.flowClassifier = Objects.requireNonNull(flowClassifier);
+        this.conversationClassifier = Objects.requireNonNull(conversationClassifier);
     }
 
     @Override
@@ -107,19 +108,9 @@ public class ElasticFlowRepository implements FlowRepository {
                 }
 
                 // Conversation classification
-                document.setEgressConvoKey(ConversationKey.egressKeyFor(document));
-                document.setIngressConvoKey(ConversationKey.ingressKeyFor(document));
-
-                // Conversation classification take #2
-                boolean isInitiator = false;
-                if (document.getSourcePort()  > document.getDestPort()) {
-                    isInitiator = true;
-                } else if (document.getSourcePort() == document.getDestPort()) {
-                    // Tie breaker
-                    isInitiator = document.getIpv4SourceAddress().compareTo(document.getIpv4DestAddress()) > 0;
-                }
-                document.setInitiator(isInitiator);
-                document.setConvoKey(ConversationKey.keyFor(document, isInitiator));
+                final ConversationClassification convoClassification = conversationClassifier.classify(document);
+                document.setConvoInitiator(convoClassification.isInitiator());
+                document.setConvoKey(convoClassification.getConversationKey().toKeyword());
             }
             ////// STOP ENRICH
 
@@ -154,13 +145,13 @@ public class ElasticFlowRepository implements FlowRepository {
         return data;
     }
 
-    private CompletableFuture<Map<String, Long>> getTopNApplications(int N, long start, long end, Direction direction) {
-        final String field = Direction.INGRESS.equals(direction) ? "dest_application" : "source_application";
+    private CompletableFuture<Map<String, Long>> getTotalBytesFromTopN(int N, long start, long end, String groupByTerm, String extraFilters) {
         final String query = "{\n" +
                 "  \"size\": 0,\n" +
                 "  \"query\": {\n" +
                 "    \"bool\": {\n" +
                 "      \"filter\": [\n" +
+                (extraFilters != null ? extraFilters : "") +
                 "        {\n" +
                 "          \"range\": {\n" +
                 "            \"timestamp\": {\n" +
@@ -174,9 +165,9 @@ public class ElasticFlowRepository implements FlowRepository {
                 "    }\n" +
                 "  },\n" +
                 "  \"aggs\": {\n" +
-                "    \"apps\": {\n" +
+                "    \"grouped_by\": {\n" +
                 "      \"terms\": {\n" +
-                String.format("        \"field\": \"%s\",\n", field) +
+                String.format("        \"field\": \"%s\",\n", groupByTerm) +
                 String.format("        \"size\": %d\n", N) +
                 "      },\n" +
                 "      \"aggs\": {\n" +
@@ -193,10 +184,10 @@ public class ElasticFlowRepository implements FlowRepository {
         return searchAsync(query).thenApply(res -> {
             final Map<String, Long> topN = new LinkedHashMap<>();
             final MetricAggregation aggs = res.getAggregations();
-            final TermsAggregation apps = aggs.getTermsAggregation("apps");
-            for (TermsAggregation.Entry app : apps.getBuckets()) {
-                final SumAggregation sumAgg = app.getSumAggregation("total_bytes");
-                topN.put(app.getKey(), sumAgg.getSum().longValue());
+            final TermsAggregation groupedBy = aggs.getTermsAggregation("grouped_by");
+            for (TermsAggregation.Entry bucket : groupedBy.getBuckets()) {
+                final SumAggregation sumAgg = bucket.getSumAggregation("total_bytes");
+                topN.put(bucket.getKey(), sumAgg.getSum().longValue());
             }
             return topN;
         });
@@ -219,8 +210,8 @@ public class ElasticFlowRepository implements FlowRepository {
         // See https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_size
         final int multiplier = 2;
 
-        final CompletableFuture<Map<String, Long>> ingressFuture = getTopNApplications(multiplier*N, start, end, Direction.INGRESS);
-        final CompletableFuture<Map<String, Long>> egressFuture = getTopNApplications(multiplier*N, start, end, Direction.EGRESS);
+        final CompletableFuture<Map<String, Long>> ingressFuture = getTotalBytesFromTopN(multiplier*N, start, end, "dest_application", null);
+        final CompletableFuture<Map<String, Long>> egressFuture = getTotalBytesFromTopN(multiplier*N, start, end, "source_application", null);
         return CompletableFuture.allOf(ingressFuture, egressFuture).thenApply((val) -> {
             final Map<String, Long> topNIngress;
             final Map<String, Long> topNEgress;
@@ -243,57 +234,10 @@ public class ElasticFlowRepository implements FlowRepository {
             });
 
             return summaries.values().stream()
+                    // Sort by total bytes reversed
                     .sorted(Comparator.comparingLong(a -> -(a.getBytesIn() + a.getBytesOut())))
+                    .limit(N)
                     .collect(Collectors.toList());
-        });
-    }
-
-    private CompletableFuture<Map<String, Long>> getTopNConversations(int N, long start, long end, Direction direction) {
-        final String query = "{\n" +
-                "  \"size\": 0,\n" +
-                "  \"query\": {\n" +
-                "    \"bool\": {\n" +
-                "     \"filter\": [{\n" +
-                "        \"term\": {\n" +
-                String.format("            \"initiator\": \"%s\"\n", Direction.INGRESS.equals(direction))  +
-                "          }\n" +
-                "        },\n" +
-                "        {\n" +
-                "          \"range\": {\n" +
-                "            \"timestamp\": {\n" +
-                String.format("              \"gte\": %d,\n", start) +
-                String.format("              \"lte\": %d,\n", end) +
-                "              \"format\": \"epoch_millis\"\n" +
-                "            }\n" +
-                "          }\n" +
-                "        }\n" +
-                "      ]\n" +
-                "    }\n" +
-                "  },\n" +
-                "  \"aggs\": {\n" +
-                "    \"convos\": {\n" +
-                "      \"terms\": {\n" +
-                "        \"field\": \"convo_key\"\n" +
-                "      },\n" +
-                "      \"aggs\": {\n" +
-                "          \"total_bytes\": {\n" +
-                "            \"sum\": {\n" +
-                "              \"field\": \"in_bytes\"\n" +
-                "            }\n" +
-                "          }\n" +
-                "        }\n" +
-                "      }\n" +
-                "    }\n" +
-                "}\n";
-        return searchAsync(query).thenApply(res -> {
-            final Map<String, Long> topN = new LinkedHashMap<>();
-            final MetricAggregation aggs = res.getAggregations();
-            final TermsAggregation apps = aggs.getTermsAggregation("convos");
-            for (TermsAggregation.Entry app : apps.getBuckets()) {
-                final SumAggregation sumAgg = app.getSumAggregation("total_bytes");
-                topN.put(app.getKey(), sumAgg.getSum().longValue());
-            }
-            return topN;
         });
     }
 
@@ -304,10 +248,8 @@ public class ElasticFlowRepository implements FlowRepository {
         final int multiplier = 2;
 
         // https://www.plixer.com/blog/netflow-and-ipfix-2/netflow-direction-and-its-value-to-troubleshooting/
-
-
-        final CompletableFuture<Map<String, Long>> ingressFuture = getTopNConversations(multiplier*N, start, end, Direction.INGRESS);
-        final CompletableFuture<Map<String, Long>> egressFuture = getTopNConversations(multiplier*N, start, end, Direction.EGRESS);
+        final CompletableFuture<Map<String, Long>> ingressFuture = getTotalBytesFromTopN(multiplier*N, start, end, "convo_key", "{\"term\":{\"convo_initiator\":\"true\"}},");
+        final CompletableFuture<Map<String, Long>> egressFuture = getTotalBytesFromTopN(multiplier*N, start, end, "convo_key", "{\"term\":{\"convo_initiator\":\"false\"}},");
         return CompletableFuture.allOf(ingressFuture, egressFuture).thenApply((val) -> {
             final Map<String, Long> topNIngress;
             final Map<String, Long> topNEgress;
@@ -329,12 +271,10 @@ public class ElasticFlowRepository implements FlowRepository {
                 return null;
             });
 
-
-            // Deduplicate
-
-
             return summaries.values().stream()
+                    // Sort by total bytes reversed
                     .sorted(Comparator.comparingLong(a -> -(a.getBytesIn() + a.getBytesOut())))
+                    .limit(N)
                     .collect(Collectors.toList());
         });
     }

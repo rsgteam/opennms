@@ -51,6 +51,8 @@ import org.opennms.netmgt.flows.api.TopNAppTrafficSummary;
 import org.opennms.netmgt.flows.api.TopNConversationTrafficSummary;
 import org.opennms.netmgt.flows.elastic.ElasticFlowRepository;
 import org.opennms.netmgt.flows.elastic.InitializingFlowRepository;
+import org.opennms.netmgt.flows.elastic.ext.ConversationClassifier;
+import org.opennms.netmgt.flows.elastic.ext.ConversationClassifierImpl;
 import org.opennms.netmgt.flows.elastic.ext.FlowClassifier;
 import org.opennms.netmgt.flows.elastic.ext.FlowClassifierImpl;
 import org.opennms.netmgt.flows.elastic.ext.ProtocolDefinition;
@@ -90,9 +92,11 @@ public class FlowQueryIT {
     @Before
     public void setUp() throws MalformedURLException, FlowException {
         final FlowClassifier flowClassifier = new FlowClassifierImpl(protocolDefinitions);
+        final ConversationClassifier convoClassifier = new ConversationClassifierImpl();
+
         final RestClientFactory restClientFactory = new RestClientFactory("http://localhost:" + HTTP_PORT, null, null);
         final JestClient client = restClientFactory.createClient();
-        final ElasticFlowRepository esFlowRepository = new ElasticFlowRepository(client, IndexStrategy.MONTHLY, flowClassifier);
+        final ElasticFlowRepository esFlowRepository = new ElasticFlowRepository(client, IndexStrategy.MONTHLY, flowClassifier, convoClassifier);
         final IndexSettings settings = new IndexSettings();
         flowRepository = new InitializingFlowRepository(esFlowRepository, client, settings);
         DefaultServiceRegistry.INSTANCE.register(flowRepository, FlowRepository.class);
@@ -107,32 +111,52 @@ public class FlowQueryIT {
     @Test
     public void canRetrieveTopNApps() throws ExecutionException, InterruptedException {
         final List<TopNAppTrafficSummary> appTrafficSummary = flowRepository.getTopNApplications(10, 0, 100).get();
-        assertThat(appTrafficSummary, hasSize(1));
-        assertThat(appTrafficSummary.get(0).getBytesIn(), equalTo(10L));
-        assertThat(appTrafficSummary.get(0).getBytesOut(), equalTo(100L));
+        assertThat(appTrafficSummary, hasSize(2));
+        final TopNAppTrafficSummary HTTPS = appTrafficSummary.get(0);
+        assertThat(HTTPS.getName(), equalTo("HTTPS"));
+        assertThat(HTTPS.getBytesIn(), equalTo(210L));
+        assertThat(HTTPS.getBytesOut(), equalTo(2100L));
+
+        final TopNAppTrafficSummary HTTP = appTrafficSummary.get(1);
+        assertThat(HTTP.getName(), equalTo("HTTP"));
+        assertThat(HTTP.getBytesIn(), equalTo(10L));
+        assertThat(HTTP.getBytesOut(), equalTo(100L));
     }
 
     @Test
     public void canRetrieveTopNConversations() throws ExecutionException, InterruptedException {
-        final List<TopNConversationTrafficSummary> convoTrafficSummary = flowRepository.getTopNConversations(10, 0, 100).get();
-        assertThat(convoTrafficSummary, hasSize(1));
-        final TopNConversationTrafficSummary convo = convoTrafficSummary.get(0);
+        final List<TopNConversationTrafficSummary> convoTrafficSummary = flowRepository.getTopNConversations(2, 0, 100).get();
+        assertThat(convoTrafficSummary, hasSize(2));
 
+        TopNConversationTrafficSummary convo = convoTrafficSummary.get(0);
+        assertThat(convo.getKey().getSourceIp(), equalTo("192.168.1.101"));
+        assertThat(convo.getKey().getDestIp(), equalTo("10.1.1.12"));
+        assertThat(convo.getBytesIn(), equalTo(110L));
+        assertThat(convo.getBytesOut(), equalTo(1100L));
+
+        convo = convoTrafficSummary.get(1);
         assertThat(convo.getKey().getSourceIp(), equalTo("192.168.1.100"));
-        assertThat(convo.getKey().getDestIp(), equalTo("10.1.1.11"));
-        assertThat(convo.getBytesIn(), equalTo(10L));
-        assertThat(convo.getBytesOut(), equalTo(100L));
+        assertThat(convo.getKey().getDestIp(), equalTo("10.1.1.12"));
+        assertThat(convo.getBytesIn(), equalTo(100L));
+        assertThat(convo.getBytesOut(), equalTo(1000L));
     }
 
     private void loadDefaultFlows() throws FlowException {
         final List<NetflowDocument> flows = new FlowBuilder()
+                // 192.168.1.100:43445 <-> 10.1.1.11:80
                 .withFlow(new Date(0), "192.168.1.100", 43444, "10.1.1.11", 80, 10)
                 .withFlow(new Date(0), "10.1.1.11", 80, "192.168.1.100", 43444, 100)
+                // 192.168.1.100:43445 <-> 10.1.1.12:443
+                .withFlow(new Date(10), "192.168.1.100", 43445, "10.1.1.12", 443, 100)
+                .withFlow(new Date(10), "10.1.1.12", 443, "192.168.1.100", 43445, 1000)
+                // 192.168.1.101:43442 <-> 10.1.1.12:443
+                .withFlow(new Date(10), "192.168.1.101", 43442, "10.1.1.12", 443, 110)
+                .withFlow(new Date(10), "10.1.1.12", 443, "192.168.1.101", 43442, 1100)
                 .build();
         flowRepository.save(flows);
 
         // Retrieve all the flows we just persisted
-        await().atMost(30, TimeUnit.SECONDS).until(() -> flowRepository.findAll("{}"), hasSize(2));
+        await().atMost(30, TimeUnit.SECONDS).until(() -> flowRepository.findAll("{}"), hasSize(flows.size()));
     }
 
 }
