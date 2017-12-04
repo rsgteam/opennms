@@ -26,36 +26,19 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.flows.api;
+package org.opennms.netmgt.flows.itests;
 
-import java.util.Objects;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.MatcherAssert.assertThat;
 
-public class TopNAppTrafficSummary {
-    private final String name;
-    private long bytesIn;
-    private long bytesOut;
+import org.junit.Test;
+import org.opennms.netmgt.flows.api.ConversationKey;
 
-    public TopNAppTrafficSummary(String name) {
-        this.name = Objects.requireNonNull(name);
-    }
+public class ConversationKeyTest {
 
-    public String getName() {
-        return name;
-    }
-
-    public long getBytesIn() {
-        return bytesIn;
-    }
-
-    public void setBytesIn(long bytesIn) {
-        this.bytesIn = bytesIn;
-    }
-
-    public long getBytesOut() {
-        return bytesOut;
-    }
-
-    public void setBytesOut(long bytesOut) {
-        this.bytesOut = bytesOut;
+    @Test
+    public void canConvert() {
+        final ConversationKey key = new ConversationKey(1, "1.1.1.1", 54534, "2.2.2.2", 80);
+        assertThat(ConversationKey.fromKeyword(key.toKeyword()), equalTo(key));
     }
 }

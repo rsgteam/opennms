@@ -30,6 +30,7 @@ package org.opennms.netmgt.flows.elastic;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 import org.opennms.netmgt.flows.api.FlowException;
 import org.opennms.netmgt.flows.api.FlowRepository;
@@ -73,13 +74,15 @@ public class InitializingFlowRepository implements FlowRepository {
     }
 
     @Override
-    public List<TopNAppTrafficSummary> getTopNApplications(int N, long start, long end) throws FlowException {
+    public CompletableFuture<List<TopNAppTrafficSummary>> getTopNApplications(int N, long start, long end) {
+        // TODO: ensureInitialized should be async here
         ensureInitialized();
         return delegate.getTopNApplications(N, start, end);
     }
 
     @Override
-    public List<TopNConversationTrafficSummary> getTopNConversations(int N, long start, long end) throws FlowException {
+    public CompletableFuture<List<TopNConversationTrafficSummary>> getTopNConversations(int N, long start, long end) {
+        // TODO: ensureInitialized should be async here
         ensureInitialized();
         return delegate.getTopNConversations(N, start, end);
     }

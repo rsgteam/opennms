@@ -26,36 +26,24 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.flows.api;
+package org.opennms.netmgt.flows.elastic.ext;
 
-import java.util.Objects;
+public class FlowClassificationImpl implements FlowClassification {
+    private final Protocol srcProto;
+    private final Protocol dstProto;
 
-public class TopNAppTrafficSummary {
-    private final String name;
-    private long bytesIn;
-    private long bytesOut;
-
-    public TopNAppTrafficSummary(String name) {
-        this.name = Objects.requireNonNull(name);
+    public FlowClassificationImpl(Protocol srcProto, Protocol dstProto) {
+        this.srcProto = srcProto;
+        this.dstProto = dstProto;
     }
 
-    public String getName() {
-        return name;
+    @Override
+    public Protocol getSrcProtocol() {
+        return srcProto;
     }
 
-    public long getBytesIn() {
-        return bytesIn;
-    }
-
-    public void setBytesIn(long bytesIn) {
-        this.bytesIn = bytesIn;
-    }
-
-    public long getBytesOut() {
-        return bytesOut;
-    }
-
-    public void setBytesOut(long bytesOut) {
-        this.bytesOut = bytesOut;
+    @Override
+    public Protocol getDstProtocol() {
+        return dstProto;
     }
 }

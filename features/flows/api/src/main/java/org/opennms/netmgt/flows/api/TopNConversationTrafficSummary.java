@@ -28,53 +28,19 @@
 
 package org.opennms.netmgt.flows.api;
 
+import java.util.Objects;
+
 public class TopNConversationTrafficSummary {
-    private String sourceIp;
-    private String destIp;
-    private int sourcePort;
-    private int destPort;
-    private int protocol;
+    private ConversationKey key;
     private long bytesIn;
     private long bytesOut;
 
-    public String getSourceIp() {
-        return sourceIp;
+    public TopNConversationTrafficSummary(ConversationKey key) {
+        this.key = Objects.requireNonNull(key);
     }
 
-    public void setSourceIp(String sourceIp) {
-        this.sourceIp = sourceIp;
-    }
-
-    public String getDestIp() {
-        return destIp;
-    }
-
-    public void setDestIp(String destIp) {
-        this.destIp = destIp;
-    }
-
-    public int getSourcePort() {
-        return sourcePort;
-    }
-
-    public void setSourcePort(int sourcePort) {
-        this.sourcePort = sourcePort;
-    }
-
-    public int getDestPort() {
-        return destPort;
-    }
-
-    public void setDestPort(int destPort) {
-        this.destPort = destPort;
-    }
-
-    public int getProtocol() {
-        return protocol;
-    }
-
-    public void setProtocol(int protocol) {
-        this.protocol = protocol;
+    public ConversationKey getKey() {
+        return key;
     }
 
     public long getBytesIn() {

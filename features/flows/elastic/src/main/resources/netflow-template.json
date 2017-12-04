@@ -14,6 +14,24 @@
         "enabled": false
       },
       "properties": {
+        "source_application": {
+          "type": "keyword"
+        },
+        "dest_application": {
+          "type": "keyword"
+        },
+        "ingress_convo_key": {
+          "type": "keyword"
+        },
+        "egress_convo_key": {
+          "type": "keyword"
+        },
+        "convo_key": {
+          "type": "keyword"
+        },
+        "initiator": {
+          "type": "boolean"
+        },
         "location": {
           "type": "keyword"
         },

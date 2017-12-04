@@ -89,6 +89,15 @@ public class NetflowDocument extends FlowDocument {
     private NodeInfo sourceNodeInfo;
     private NodeInfo destNodeInfo;
 
+    private String sourceApplication;
+    private String destApplication;
+
+    private String ingressConvoKey;
+    private String egressConvoKey;
+
+    private String convoKey;
+    private boolean initiator;
+
     public void setVersion(int version) {
         this.version = version;
     }
@@ -327,5 +336,53 @@ public class NetflowDocument extends FlowDocument {
 
     public NodeInfo getDestNodeInfo() {
         return destNodeInfo;
+    }
+
+    public String getSourceApplication() {
+        return sourceApplication;
+    }
+
+    public void setSourceApplication(String sourceApplication) {
+        this.sourceApplication = sourceApplication;
+    }
+
+    public String getDestApplication() {
+        return destApplication;
+    }
+
+    public void setDestApplication(String destApplication) {
+        this.destApplication = destApplication;
+    }
+
+    public String getIngressConvoKey() {
+        return ingressConvoKey;
+    }
+
+    public void setIngressConvoKey(String ingressConvoKey) {
+        this.ingressConvoKey = ingressConvoKey;
+    }
+
+    public String getEgressConvoKey() {
+        return egressConvoKey;
+    }
+
+    public void setEgressConvoKey(String egressConvoKey) {
+        this.egressConvoKey = egressConvoKey;
+    }
+
+    public String getConvoKey() {
+        return convoKey;
+    }
+
+    public void setConvoKey(String convoKey) {
+        this.convoKey = convoKey;
+    }
+
+    public boolean getInitiator() {
+        return initiator;
+    }
+
+    public void setInitiator(boolean initiator) {
+        this.initiator = initiator;
     }
 }

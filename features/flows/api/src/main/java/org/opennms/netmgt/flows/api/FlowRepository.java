@@ -29,6 +29,7 @@
 package org.opennms.netmgt.flows.api;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public interface FlowRepository {
 
@@ -38,8 +39,8 @@ public interface FlowRepository {
 
     String rawQuery(String query) throws FlowException;
 
-    List<TopNAppTrafficSummary> getTopNApplications(int N, long start, long end) throws FlowException;
+    CompletableFuture<List<TopNAppTrafficSummary>> getTopNApplications(int N, long start, long end);
 
-    List<TopNConversationTrafficSummary> getTopNConversations(int N, long start, long end) throws FlowException;
+    CompletableFuture<List<TopNConversationTrafficSummary>> getTopNConversations(int N, long start, long end);
 
 }

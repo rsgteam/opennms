@@ -26,36 +26,12 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.flows.api;
+package org.opennms.netmgt.flows.elastic.ext;
 
-import java.util.Objects;
+import org.opennms.netmgt.flows.api.NetflowDocument;
 
-public class TopNAppTrafficSummary {
-    private final String name;
-    private long bytesIn;
-    private long bytesOut;
+public interface FlowClassifier {
 
-    public TopNAppTrafficSummary(String name) {
-        this.name = Objects.requireNonNull(name);
-    }
+    FlowClassification classify(NetflowDocument flow);
 
-    public String getName() {
-        return name;
-    }
-
-    public long getBytesIn() {
-        return bytesIn;
-    }
-
-    public void setBytesIn(long bytesIn) {
-        this.bytesIn = bytesIn;
-    }
-
-    public long getBytesOut() {
-        return bytesOut;
-    }
-
-    public void setBytesOut(long bytesOut) {
-        this.bytesOut = bytesOut;
-    }
 }

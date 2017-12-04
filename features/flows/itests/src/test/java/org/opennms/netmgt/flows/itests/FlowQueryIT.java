@@ -36,6 +36,7 @@ import static org.hamcrest.Matchers.hasSize;
 import java.net.MalformedURLException;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.Before;
@@ -50,6 +51,8 @@ import org.opennms.netmgt.flows.api.TopNAppTrafficSummary;
 import org.opennms.netmgt.flows.api.TopNConversationTrafficSummary;
 import org.opennms.netmgt.flows.elastic.ElasticFlowRepository;
 import org.opennms.netmgt.flows.elastic.InitializingFlowRepository;
+import org.opennms.netmgt.flows.elastic.ext.FlowClassifier;
+import org.opennms.netmgt.flows.elastic.ext.FlowClassifierImpl;
 import org.opennms.netmgt.flows.elastic.ext.ProtocolDefinition;
 import org.opennms.netmgt.flows.elastic.ext.ProtocolType;
 import org.opennms.netmgt.flows.elastic.template.IndexSettings;
@@ -77,7 +80,7 @@ public class FlowQueryIT {
                     .withSetting("transport.tcp.port", HTTP_TRANSPORT_PORT)
     );
 
-    final List<ProtocolDefinition> protocolDefinitions = Lists.newArrayList(
+    private final static List<ProtocolDefinition> protocolDefinitions = Lists.newArrayList(
             new ProtocolDefinition("HTTP", "80,8080", ProtocolType.TCP),
             new ProtocolDefinition("HTTPS", "443", ProtocolType.TCP)
     );
@@ -86,9 +89,10 @@ public class FlowQueryIT {
 
     @Before
     public void setUp() throws MalformedURLException, FlowException {
+        final FlowClassifier flowClassifier = new FlowClassifierImpl(protocolDefinitions);
         final RestClientFactory restClientFactory = new RestClientFactory("http://localhost:" + HTTP_PORT, null, null);
         final JestClient client = restClientFactory.createClient();
-        final ElasticFlowRepository esFlowRepository = new ElasticFlowRepository(client, IndexStrategy.MONTHLY);
+        final ElasticFlowRepository esFlowRepository = new ElasticFlowRepository(client, IndexStrategy.MONTHLY, flowClassifier);
         final IndexSettings settings = new IndexSettings();
         flowRepository = new InitializingFlowRepository(esFlowRepository, client, settings);
         DefaultServiceRegistry.INSTANCE.register(flowRepository, FlowRepository.class);
@@ -101,23 +105,23 @@ public class FlowQueryIT {
     }
 
     @Test
-    public void canRetrieveTopNApps() throws FlowException {
-        final List<TopNAppTrafficSummary> appTrafficSummary = flowRepository.getTopNApplications(10, 0, 100);
+    public void canRetrieveTopNApps() throws ExecutionException, InterruptedException {
+        final List<TopNAppTrafficSummary> appTrafficSummary = flowRepository.getTopNApplications(10, 0, 100).get();
         assertThat(appTrafficSummary, hasSize(1));
-        assertThat(appTrafficSummary.get(0).getBytesIn(), equalTo(10));
-        assertThat(appTrafficSummary.get(0).getBytesOut(), equalTo(100));
+        assertThat(appTrafficSummary.get(0).getBytesIn(), equalTo(10L));
+        assertThat(appTrafficSummary.get(0).getBytesOut(), equalTo(100L));
     }
 
     @Test
-    public void catRetrieveTopNConversations() throws FlowException {
-        final List<TopNConversationTrafficSummary> convoTrafficSummary = flowRepository.getTopNConversations(10, 0, 100);
+    public void canRetrieveTopNConversations() throws ExecutionException, InterruptedException {
+        final List<TopNConversationTrafficSummary> convoTrafficSummary = flowRepository.getTopNConversations(10, 0, 100).get();
         assertThat(convoTrafficSummary, hasSize(1));
         final TopNConversationTrafficSummary convo = convoTrafficSummary.get(0);
 
-        assertThat(convo.getSourceIp(), equalTo("192.168.1.100"));
-        assertThat(convo.getDestIp(), equalTo("10.1.1.11"));
-        assertThat(convo.getBytesIn(), equalTo(10));
-        assertThat(convo.getBytesOut(), equalTo(100));
+        assertThat(convo.getKey().getSourceIp(), equalTo("192.168.1.100"));
+        assertThat(convo.getKey().getDestIp(), equalTo("10.1.1.11"));
+        assertThat(convo.getBytesIn(), equalTo(10L));
+        assertThat(convo.getBytesOut(), equalTo(100L));
     }
 
     private void loadDefaultFlows() throws FlowException {
