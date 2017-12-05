@@ -1,7 +1,7 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2017-2017 The OpenNMS Group, Inc.
+ * Copyright (C) 2017 The OpenNMS Group, Inc.
  * OpenNMS(R) is Copyright (C) 1999-2017 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
@@ -26,31 +26,42 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.flows.api;
+package org.opennms.web.rest.v1.model;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import javax.xml.bind.annotation.XmlAttribute;
 
-import org.opennms.netmgt.flows.api.model.Application;
-import org.opennms.netmgt.flows.api.model.TrafficSummary;
-import org.opennms.netmgt.model.OnmsIpInterface;
+public class FlowRequestFilter {
 
-import com.google.common.collect.Table;
+    @XmlAttribute(name="location")
+    private String location;
 
-public interface FlowRepository {
+    @XmlAttribute(name="node")
+    private String node;
 
-    void save(List<NetflowDocument> document) throws FlowException;
+    @XmlAttribute(name="ifIndex")
+    private Integer ifIndex;
 
-    List<NetflowDocument> findAll(String query) throws FlowException;
+    public String getLocation() {
+        return location;
+    }
 
-    String rawQuery(String query) throws FlowException;
+    public void setLocation(String location) {
+        this.location = location;
+    }
 
-    CompletableFuture<List<TrafficSummary<Application>>> getTopNApplications(int N, long start, long end);
+    public String getNode() {
+        return node;
+    }
 
-    CompletableFuture<Table<Application, Long, Double>> getTopNApplicationsSeries(int N, long start, long end, long step);
+    public void setNode(String node) {
+        this.node = node;
+    }
 
-    CompletableFuture<List<TrafficSummary<ConversationKey>>> getTopNConversations(int N, long start, long end);
+    public Integer getIfIndex() {
+        return ifIndex;
+    }
 
-    CompletableFuture<Table<ConversationKey, Long, Double>> getTopNConversationsSeries(int N, long start, long end, long step);
-
+    public void setIfIndex(Integer ifIndex) {
+        this.ifIndex = ifIndex;
+    }
 }

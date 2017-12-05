@@ -1,7 +1,7 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2017-2017 The OpenNMS Group, Inc.
+ * Copyright (C) 2017 The OpenNMS Group, Inc.
  * OpenNMS(R) is Copyright (C) 1999-2017 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
@@ -26,31 +26,9 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.flows.api;
+package org.opennms.web.rest.v1.model;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
-import org.opennms.netmgt.flows.api.model.Application;
-import org.opennms.netmgt.flows.api.model.TrafficSummary;
-import org.opennms.netmgt.model.OnmsIpInterface;
-
-import com.google.common.collect.Table;
-
-public interface FlowRepository {
-
-    void save(List<NetflowDocument> document) throws FlowException;
-
-    List<NetflowDocument> findAll(String query) throws FlowException;
-
-    String rawQuery(String query) throws FlowException;
-
-    CompletableFuture<List<TrafficSummary<Application>>> getTopNApplications(int N, long start, long end);
-
-    CompletableFuture<Table<Application, Long, Double>> getTopNApplicationsSeries(int N, long start, long end, long step);
-
-    CompletableFuture<List<TrafficSummary<ConversationKey>>> getTopNConversations(int N, long start, long end);
-
-    CompletableFuture<Table<ConversationKey, Long, Double>> getTopNConversationsSeries(int N, long start, long end, long step);
-
+public enum ReportType {
+    TopNApplications,
+    TopNConversations;
 }

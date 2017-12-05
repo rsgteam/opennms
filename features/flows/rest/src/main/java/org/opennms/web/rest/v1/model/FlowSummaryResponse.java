@@ -1,7 +1,7 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2017-2017 The OpenNMS Group, Inc.
+ * Copyright (C) 2017 The OpenNMS Group, Inc.
  * OpenNMS(R) is Copyright (C) 1999-2017 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
@@ -26,31 +26,59 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.flows.api;
+package org.opennms.web.rest.v1.model;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
-import org.opennms.netmgt.flows.api.model.Application;
-import org.opennms.netmgt.flows.api.model.TrafficSummary;
-import org.opennms.netmgt.model.OnmsIpInterface;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlAttribute;
+import javax.xml.bind.annotation.XmlElement;
 
-import com.google.common.collect.Table;
+@XmlAccessorType(XmlAccessType.NONE)
+public class FlowSummaryResponse {
 
-public interface FlowRepository {
+    @XmlAttribute(name="start")
+    private long start;
 
-    void save(List<NetflowDocument> document) throws FlowException;
+    @XmlAttribute(name="end")
+    private long end;
 
-    List<NetflowDocument> findAll(String query) throws FlowException;
+    @XmlElement(name="headers")
+    private List<String> headers;
 
-    String rawQuery(String query) throws FlowException;
+    @XmlElement(name="rows")
+    private List<List<Object>> rows;
 
-    CompletableFuture<List<TrafficSummary<Application>>> getTopNApplications(int N, long start, long end);
+    public long getStart() {
+        return start;
+    }
 
-    CompletableFuture<Table<Application, Long, Double>> getTopNApplicationsSeries(int N, long start, long end, long step);
+    public void setStart(long start) {
+        this.start = start;
+    }
 
-    CompletableFuture<List<TrafficSummary<ConversationKey>>> getTopNConversations(int N, long start, long end);
+    public long getEnd() {
+        return end;
+    }
 
-    CompletableFuture<Table<ConversationKey, Long, Double>> getTopNConversationsSeries(int N, long start, long end, long step);
+    public void setEnd(long end) {
+        this.end = end;
+    }
 
+    public List<String> getHeaders() {
+        return headers;
+    }
+
+    public void setHeaders(List<String> headers) {
+        this.headers = headers;
+    }
+
+    public List<List<Object>> getRows() {
+        return rows;
+    }
+
+    public void setRows(List<List<Object>> rows) {
+        this.rows = rows;
+    }
 }

@@ -49,6 +49,8 @@ import org.opennms.netmgt.flows.api.NetflowDocument;
 import org.opennms.netmgt.flows.api.QueryException;
 import org.opennms.netmgt.flows.api.TopNAppTrafficSummary;
 import org.opennms.netmgt.flows.api.TopNConversationTrafficSummary;
+import org.opennms.netmgt.flows.api.model.Application;
+import org.opennms.netmgt.flows.api.model.TrafficSummary;
 import org.opennms.netmgt.flows.elastic.ext.ConversationClassification;
 import org.opennms.netmgt.flows.elastic.ext.ConversationClassifier;
 import org.opennms.netmgt.flows.elastic.ext.Direction;
@@ -56,6 +58,8 @@ import org.opennms.netmgt.flows.elastic.ext.FlowClassification;
 import org.opennms.netmgt.flows.elastic.ext.FlowClassifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Table;
 
 import io.searchbox.action.Action;
 import io.searchbox.client.JestClient;
@@ -205,7 +209,7 @@ public class ElasticFlowRepository implements FlowRepository {
     }
 
     @Override
-    public CompletableFuture<List<TopNAppTrafficSummary>> getTopNApplications(int N, long start, long end) {
+    public CompletableFuture<List<TrafficSummary<Application>>> getTopNApplications(int N, long start, long end) {
         // Increase the multiplier for increased accuracy
         // See https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_size
         final int multiplier = 2;
@@ -223,12 +227,12 @@ public class ElasticFlowRepository implements FlowRepository {
                 throw new RuntimeException(e);
             }
 
-            final Map<String, TopNAppTrafficSummary> summaries = new HashMap<>();
-            topNToSummary(topNIngress, summaries, TopNAppTrafficSummary::new, (bytesIn, summary) -> {
+            final Map<String, TrafficSummary<Application>> summaries = new HashMap<>();
+            topNToSummary(topNIngress, summaries, name -> new TrafficSummary<>(new Application(name)), (bytesIn, summary) -> {
                 summary.setBytesIn(bytesIn);
                 return null;
             });
-            topNToSummary(topNEgress, summaries, TopNAppTrafficSummary::new, (bytesOut, summary) -> {
+            topNToSummary(topNEgress, summaries, name -> new TrafficSummary<>(new Application(name)), (bytesOut, summary) -> {
                 summary.setBytesOut(bytesOut);
                 return null;
             });
@@ -242,7 +246,12 @@ public class ElasticFlowRepository implements FlowRepository {
     }
 
     @Override
-    public CompletableFuture<List<TopNConversationTrafficSummary>> getTopNConversations(int N, long start, long end) {
+    public CompletableFuture<Table<Application, Long, Double>> getTopNApplicationsSeries(int N, long start, long end, long step) {
+        return null;
+    }
+
+    @Override
+    public CompletableFuture<List<TrafficSummary<ConversationKey>>> getTopNConversations(int N, long start, long end) {
         // Increase the multiplier for increased accuracy
         // See https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-terms-aggregation.html#_size
         final int multiplier = 2;
@@ -261,12 +270,12 @@ public class ElasticFlowRepository implements FlowRepository {
                 throw new RuntimeException(e);
             }
 
-            final Map<String, TopNConversationTrafficSummary> summaries = new HashMap<>();
-            topNToSummary(topNIngress, summaries, key -> new TopNConversationTrafficSummary(ConversationKey.fromKeyword(key)), (bytesIn, summary) -> {
+            final Map<String, TrafficSummary<ConversationKey>> summaries = new HashMap<>();
+            topNToSummary(topNIngress, summaries, key -> new TrafficSummary<>(ConversationKey.fromKeyword(key)), (bytesIn, summary) -> {
                 summary.setBytesIn(bytesIn);
                 return null;
             });
-            topNToSummary(topNEgress, summaries, key -> new TopNConversationTrafficSummary(ConversationKey.fromKeyword(key)), (bytesOut, summary) -> {
+            topNToSummary(topNEgress, summaries, key -> new TrafficSummary<>(ConversationKey.fromKeyword(key)), (bytesOut, summary) -> {
                 summary.setBytesOut(bytesOut);
                 return null;
             });
@@ -279,10 +288,14 @@ public class ElasticFlowRepository implements FlowRepository {
         });
     }
 
+    @Override
+    public CompletableFuture<Table<ConversationKey, Long, Double>> getTopNConversationsSeries(int N, long start, long end, long step) {
+        return null;
+    }
+
     private <T extends JestResult> T executeRequest(Action<T> clientRequest) throws FlowException {
         try {
-            final T result = client.execute(clientRequest);
-            return result;
+            return client.execute(clientRequest);
         } catch (IOException e) {
             throw new FlowException("Error executing query", e);
         }

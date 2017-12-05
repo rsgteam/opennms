@@ -1,7 +1,7 @@
 /*******************************************************************************
  * This file is part of OpenNMS(R).
  *
- * Copyright (C) 2017-2017 The OpenNMS Group, Inc.
+ * Copyright (C) 2017 The OpenNMS Group, Inc.
  * OpenNMS(R) is Copyright (C) 1999-2017 The OpenNMS Group, Inc.
  *
  * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
@@ -26,31 +26,37 @@
  *     http://www.opennms.com/
  *******************************************************************************/
 
-package org.opennms.netmgt.flows.api;
+package org.opennms.netmgt.flows.api.model;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.Objects;
 
-import org.opennms.netmgt.flows.api.model.Application;
-import org.opennms.netmgt.flows.api.model.TrafficSummary;
-import org.opennms.netmgt.model.OnmsIpInterface;
+public class TrafficSummary<T> {
 
-import com.google.common.collect.Table;
+    private final T key;
+    private long bytesIn;
+    private long bytesOut;
 
-public interface FlowRepository {
+    public TrafficSummary(T key) {
+        this.key = Objects.requireNonNull(key);
+    }
 
-    void save(List<NetflowDocument> document) throws FlowException;
+    public T getKey() {
+        return key;
+    }
 
-    List<NetflowDocument> findAll(String query) throws FlowException;
+    public long getBytesIn() {
+        return bytesIn;
+    }
 
-    String rawQuery(String query) throws FlowException;
+    public void setBytesIn(long bytesIn) {
+        this.bytesIn = bytesIn;
+    }
 
-    CompletableFuture<List<TrafficSummary<Application>>> getTopNApplications(int N, long start, long end);
+    public long getBytesOut() {
+        return bytesOut;
+    }
 
-    CompletableFuture<Table<Application, Long, Double>> getTopNApplicationsSeries(int N, long start, long end, long step);
-
-    CompletableFuture<List<TrafficSummary<ConversationKey>>> getTopNConversations(int N, long start, long end);
-
-    CompletableFuture<Table<ConversationKey, Long, Double>> getTopNConversationsSeries(int N, long start, long end, long step);
-
+    public void setBytesOut(long bytesOut) {
+        this.bytesOut = bytesOut;
+    }
 }

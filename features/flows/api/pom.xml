@@ -26,4 +26,10 @@
       </plugin>
     </plugins>
   </build>
+    <dependencies>
+        <dependency>
+            <groupId>org.opennms</groupId>
+            <artifactId>opennms-model</artifactId>
+        </dependency>
+    </dependencies>
 </project>

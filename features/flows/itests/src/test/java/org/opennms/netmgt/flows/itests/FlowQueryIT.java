@@ -143,7 +143,7 @@ public class FlowQueryIT {
 
     private void loadDefaultFlows() throws FlowException {
         final List<NetflowDocument> flows = new FlowBuilder()
-                // 192.168.1.100:43445 <-> 10.1.1.11:80
+                // 192.168.1.100:43444 <-> 10.1.1.11:80
                 .withFlow(new Date(0), "192.168.1.100", 43444, "10.1.1.11", 80, 10)
                 .withFlow(new Date(0), "10.1.1.11", 80, "192.168.1.100", 43444, 100)
                 // 192.168.1.100:43445 <-> 10.1.1.12:443
