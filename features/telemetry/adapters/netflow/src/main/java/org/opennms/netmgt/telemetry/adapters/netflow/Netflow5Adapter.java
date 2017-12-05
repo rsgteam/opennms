@@ -29,6 +29,7 @@
 package org.opennms.netmgt.telemetry.adapters.netflow;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -43,6 +44,8 @@ import org.opennms.netmgt.dao.api.NodeDao;
 import org.opennms.netmgt.flows.api.FlowRepository;
 import org.opennms.netmgt.flows.api.NetflowDocument;
 import org.opennms.netmgt.flows.api.NodeInfo;
+import org.opennms.netmgt.flows.classification.ClassificationEngine;
+import org.opennms.netmgt.flows.classification.DefaultClassificationEngine;
 import org.opennms.netmgt.model.OnmsNode;
 import org.opennms.netmgt.telemetry.adapters.api.Adapter;
 import org.opennms.netmgt.telemetry.adapters.api.TelemetryMessage;
@@ -104,6 +107,9 @@ public class Netflow5Adapter implements Adapter {
     private FlowRepository flowRepository;
 
     private final Netflow5Converter converter = new Netflow5Converter();
+
+    // TODO MVR use caching and real engine
+    private final ClassificationEngine classificationEngine = new DefaultClassificationEngine(() -> new ArrayList<>());
 
     /**
      * Flows/second throughput
@@ -291,6 +297,9 @@ public class Netflow5Adapter implements Adapter {
                 getNodeInfoFromCache(location, sourceAddress).ifPresent(node -> document.setExporterNodeInfo(node));
                 getNodeInfoFromCache(location, document.getIpv4DestAddress()).ifPresent(node -> document.setDestNodeInfo(node));
                 getNodeInfoFromCache(location, document.getIpv4SourceAddress()).ifPresent(node -> document.setSourceNodeInfo(node));
+
+                // Apply Application mapping
+                document.setApplication(classificationEngine.classify(document));
             });
             return null;
         });
